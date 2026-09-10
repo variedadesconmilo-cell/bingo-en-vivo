@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "salas": {
+      ".read": true,
+      ".write": true,
+      "$sala": {
+        ".read": true,
+        ".write": true
+      }
+    }
+  }
+}

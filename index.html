@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#06040f">
+<title>Bingo en Vivo — Multijugador en tiempo real</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="pantalla-inicio">
+
+  <main class="inicio-wrap">
+
+    <h1 class="logo-gigante">BINGO<span>EN VIVO</span></h1>
+    <p class="tagline">Multijugador · Tiempo real · Sin instalar nada</p>
+
+    <div class="tarjetas-inicio">
+
+      <!-- ============ CREAR SALA (MODERADOR) ============ -->
+      <section class="tarjeta">
+        <div class="tarjeta-icono">🎙️</div>
+        <h2>Soy Moderador</h2>
+        <p>Crea una sala, configura el tipo de juego y transmite el sorteo en vivo.</p>
+        <button class="btn btn-secundario" id="btnCrearSala" style="width:100%">
+          Crear nueva sala
+        </button>
+      </section>
+
+      <!-- ============ UNIRSE (JUGADOR) ============ -->
+      <section class="tarjeta">
+        <div class="tarjeta-icono">🎟️</div>
+        <h2>Soy Jugador</h2>
+        <p>Ingresa el código de sala que te compartió el moderador y elige tu cartón.</p>
+        <div class="fila" style="margin-bottom:12px">
+          <input class="input" id="inputCodigo" maxlength="6" placeholder="CÓDIGO">
+        </div>
+        <button class="btn btn-primario" id="btnUnirse" style="width:100%">
+          Unirme a la sala
+        </button>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- ===== SDK de Firebase (compat v10 por CDN) ===== -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+  <script src="firebase-config.js"></script>
+  <script src="app.js"></script>
+
+  <script>
+    /* ============================================================
+       Lógica de la pantalla de inicio
+       · Crear sala  -> genera código y va a moderador.html?sala=XXXXX
+       · Unirse      -> valida código y va a jugador.html?sala=XXXXX
+       ============================================================ */
+
+    const btnCrear = document.getElementById("btnCrearSala");
+    const btnUnir  = document.getElementById("btnUnirse");
+    const inputCod = document.getElementById("inputCodigo");
+
+    /* Si ya existe ?sala= en la URL, precargarlo */
+    const salaEnURL = leerSalaDeURL();
+    if (salaEnURL) inputCod.value = salaEnURL;
+
+    /* -------- Crear sala -------- */
+    btnCrear.addEventListener("click", async () => {
+      if (!FIREBASE_OK) {
+        aviso("Primero configura <b>firebase-config.js</b> con tus credenciales.", "error", 6000);
+        return;
+      }
+
+      btnCrear.disabled = true;
+      btnCrear.textContent = "Creando...";
+
+      try {
+        const codigo = await crearSalaUnica();
+        location.href = "moderador.html?sala=" + codigo;
+      } catch (err) {
+        console.error(err);
+        aviso("No se pudo crear la sala. Revisa tu conexión o las reglas de la base de datos.", "error", 5000);
+        btnCrear.disabled = false;
+        btnCrear.textContent = "Crear nueva sala";
+      }
+    });
+
+    /* Genera un código que NO exista en la base de datos */
+    async function crearSalaUnica() {
+      for (let intento = 0; intento < 6; intento++) {
+        const codigo = codigoSala(5);
+        const snap = await db.ref("salas/" + codigo).get();
+        if (!snap.exists()) {
+          await db.ref("salas/" + codigo).set({
+            creadaEn: Date.now(),
+            estado: "esperando",      // esperando | jugando | finalizada
+            config: {
+              patron: "linea",
+              multiGanador: false,
+              premio: ""
+            },
+            bolas: [],
+            bolaActual: 0,
+            ganadores: {},
+            ronda: 1
+          });
+          return codigo;
+        }
+      }
+      throw new Error("No se pudo generar un código único.");
+    }
+
+    /* -------- Unirse a sala -------- */
+    btnUnir.addEventListener("click", () => {
+      const codigo = (inputCod.value || "").toUpperCase().trim();
+      if (codigo.length < 4) {
+        aviso("Escribe un código de sala válido.", "error");
+        return;
+      }
+      location.href = "jugador.html?sala=" + codigo;
+    });
+
+    /* Enter en el input = unirse */
+    inputCod.addEventListener("keydown", e => {
+      if (e.key === "Enter") btnUnir.click();
+    });
+  </script>
+
+</body>
+</html>

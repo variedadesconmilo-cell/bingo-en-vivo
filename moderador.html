@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#06040f">
+<title>Moderador — Bingo en Vivo</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ================= TOPBAR ================= -->
+  <header class="topbar">
+    <div class="marca">BINGO EN VIVO <em>· MODERADOR</em></div>
+    <div class="topbar-derecha">
+      <div class="chip-sala">
+        <small>SALA</small>
+        <strong id="codigoSala">— — — — —</strong>
+      </div>
+      <button class="btn btn-mini btn-secundario" id="btnCopiar">Copiar enlace</button>
+      <button class="btn btn-mini" id="btnSonido">🔊</button>
+    </div>
+  </header>
+
+  <main class="layout-mod">
+
+    <!-- ============ COLUMNA IZQUIERDA: SORTEO ============ -->
+    <section class="columna">
+
+      <div class="panel">
+        <div class="panel-titulo">
+          <span>Bola actual</span>
+          <small id="estadoPartida">esperando</small>
+        </div>
+
+        <div class="bola-escenario">
+          <div class="bola bola-vacia" id="bola">
+            <div class="bola-letra"  id="bolaLetra">·</div>
+            <div class="bola-numero" id="bolaNumero">--</div>
+          </div>
+        </div>
+
+        <button class="btn btn-girar" id="btnGirar" disabled>
+          🎲 GIRAR BOLA
+        </button>
+
+        <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap">
+          <button class="btn btn-primario btn-mini" id="btnIniciar">▶ Iniciar partida</button>
+          <button class="btn btn-mini" id="btnNuevaRonda">🔄 Nueva ronda</button>
+          <button class="btn btn-mini btn-secundario" id="btnCerrarRonda" disabled>🏁 Cerrar ronda</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-titulo">
+          <span>Historial</span>
+          <small id="contadorBolas">0 / 75</small>
+        </div>
+        <div class="historial" id="historial">
+          <p class="texto-suave">Aún no han salido números.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============ COLUMNA DERECHA: CONTROL ============ -->
+    <section class="columna">
+
+      <!-- CONFIGURACIÓN -->
+      <div class="panel" id="panelConfig">
+        <div class="panel-titulo">
+          <span>Configuración de la partida</span>
+          <small>antes de iniciar</small>
+        </div>
+
+        <label class="campo">
+          <span>Modalidad de victoria</span>
+          <select class="input" id="selPatron">
+            <option value="linea">Línea (fila, columna o diagonal)</option>
+            <option value="cartonLleno">Cartón Lleno</option>
+            <option value="letraL">Letra L</option>
+            <option value="letraO">Letra O</option>
+            <option value="cuatroEsquinas">Cuatro Esquinas</option>
+            <option value="equis">Equis (X)</option>
+          </select>
+        </label>
+
+        <label class="campo">
+          <span>Premio (texto o monto)</span>
+          <input class="input" id="inpPremio" placeholder="Ej: $50.000 o 1 botella de vino">
+        </label>
+
+        <label class="switch">
+          <input type="checkbox" id="chkMulti">
+          <span class="slider"></span>
+          <span class="switch-label">Permitir más de un ganador</span>
+        </label>
+
+        <p class="texto-suave">
+          Si está desactivado, el juego se cierra automáticamente al primer BINGO válido.
+        </p>
+
+        <button class="btn btn-secundario" id="btnGuardarConfig" style="width:100%; margin-top:14px">
+          Guardar configuración
+        </button>
+      </div>
+
+      <!-- JUGADORES -->
+      <div class="panel">
+        <div class="panel-titulo">
+          <span>Jugadores conectados</span>
+          <small id="contadorJugadores">0</small>
+        </div>
+        <div class="lista-jugadores" id="listaJugadores">
+          <p class="texto-suave">Nadie se ha unido todavía.</p>
+        </div>
+      </div>
+
+      <!-- GANADORES -->
+      <div class="panel" id="panelGanadores">
+        <div class="panel-titulo">
+          <span>Ganadores</span>
+          <small id="contadorGanadores">0</small>
+        </div>
+        <div class="lista-ganadores" id="listaGanadores">
+          <p class="texto-suave">Sin ganadores todavía.</p>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ===== SDK Firebase ===== -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+  <script src="firebase-config.js"></script>
+  <script src="app.js"></script>
+
+  <script>
+    /* ============================================================
+       MODERADOR
+       ============================================================ */
+
+    const CODIGO = leerSalaDeURL();
+    if (!CODIGO) {
+      document.body.innerHTML =
+        '<div class="pantalla-inicio"><div class="inicio-wrap">' +
+        '<h1 class="logo-gigante">BINGO</h1>' +
+        '<p class="tagline">Falta el código de sala en la URL.</p>' +
+        '<a class="btn btn-primario" href="index.html">Volver al inicio</a>' +
+        '</div></div>';
+      throw new Error("Sin sala");
+    }
+
+    document.getElementById("codigoSala").textContent = CODIGO;
+
+    const salaRef = db.ref("salas/" + CODIGO);
+
+    /* Estado local espejo */
+    let estadoSala = null;
+
+    /* ---------- BOTONES ---------- */
+    const btnGirar        = document.getElementById("btnGirar");
+    const btnIniciar      = document.getElementById("btnIniciar");
+    const btnNuevaRonda   = document.getElementById("btnNuevaRonda");
+    const btnCerrarRonda  = document.getElementById("btnCerrarRonda");
+    const btnGuardarCfg   = document.getElementById("btnGuardarConfig");
+    const btnCopiar       = document.getElementById("btnCopiar");
+    const btnSonido       = document.getElementById("btnSonido");
+
+    const selPatron    = document.getElementById("selPatron");
+    const inpPremio    = document.getElementById("inpPremio");
+    const chkMulti     = document.getElementById("chkMulti");
+
+    const bolaEl       = document.getElementById("bola");
+    const bolaLetra    = document.getElementById("bolaLetra");
+    const bolaNumero   = document.getElementById("bolaNumero");
+    const estadoEl     = document.getElementById("estadoPartida");
+    const historialEl  = document.getElementById("historial");
+    const contadorBolas= document.getElementById("contadorBolas");
+    const listaJugEl   = document.getElementById("listaJugadores");
+    const contJugEl    = document.getElementById("contadorJugadores");
+    const listaGanEl   = document.getElementById("listaGanadores");
+    const contGanEl    = document.getElementById("contadorGanadores");
+    const panelConfig  = document.getElementById("panelConfig");
+
+    /* ---------- Sonido ---------- */
+    btnSonido.addEventListener("click", () => {
+      setSilencio(!estaSilenciado());
+      btnSonido.textContent = estaSilenciado() ? "🔇" : "🔊";
+    });
+
+    /* ---------- Copiar enlace ---------- */
+    btnCopiar.addEventListener("click", async () => {
+      const enlace = enlaceJugadores(CODIGO);
+      await copiarAlPortapapeles(enlace);
+      aviso("✅ Enlace copiado:<br><small>" + enlace + "</small>", "ok", 5000);
+    });
+
+    /* ---------- Guardar configuración ---------- */
+    btnGuardarCfg.addEventListener("click", async () => {
+      await salaRef.child("config").set({
+        patron: selPatron.value,
+        multiGanador: chkMulti.checked,
+        premio: inpPremio.value.trim()
+      });
+      aviso("Configuración guardada.", "ok");
+    });
+
+    /* ---------- Iniciar partida ---------- */
+    btnIniciar.addEventListener("click", async () => {
+      if (!estadoSala) return;
+
+      // Asegura guardar config actual
+      await salaRef.child("config").set({
+        patron: selPatron.value,
+        multiGanador: chkMulti.checked,
+        premio: inpPremio.value.trim()
+      });
+
+      const jugadores = estadoSala.jugadores || {};
+      const hayJugadores = Object.keys(jugadores).length > 0;
+      if (!hayJugadores) {
+        aviso("No hay jugadores conectados todavía.", "error");
+        return;
+      }
+
+      // Genera un cartón nuevo para cada jugador conectado
+      const updates = {};
+      Object.keys(jugadores).forEach(id => {
+        updates["jugadores/" + id + "/carton"]    = generarCarton();
+        updates["jugadores/" + id + "/marcas"]    = null;   // limpia marcas
+        updates["jugadores/" + id + "/bingo"]     = false;
+      });
+
+      updates["estado"]      = "jugando";
+      updates["bolas"]       = [];
+      updates["bolaActual"]  = 0;
+      updates["ganadores"]   = null;
+
+      await salaRef.update(updates);
+
+      bolaEl.classList.add("bola-vacia");
+      bolaLetra.textContent  = "·";
+      bolaNumero.textContent = "--";
+      bolaEl.removeAttribute("data-letra");
+
+      aviso("¡Partida iniciada! 🎉", "ok");
+    });
+
+    /* ---------- Nueva ronda ---------- */
+    btnNuevaRonda.addEventListener("click", async () => {
+      if (!estadoSala) return;
+      const jugadores = estadoSala.jugadores || {};
+
+      const updates = {};
+      Object.keys(jugadores).forEach(id => {
+        updates["jugadores/" + id + "/carton"] = generarCarton();
+        updates["jugadores/" + id + "/marcas"] = null;
+        updates["jugadores/" + id + "/bingo"]  = false;
+      });
+
+      updates["estado"]     = "jugando";
+      updates["bolas"]      = [];
+      updates["bolaActual"] = 0;
+      updates["ganadores"]  = null;
+      updates["ronda"]      = (estadoSala.ronda || 1) + 1;
+
+      await salaRef.update(updates);
+
+      bolaEl.classList.add("bola-vacia");
+      bolaLetra.textContent  = "·";
+      bolaNumero.textContent = "--";
+      bolaEl.removeAttribute("data-letra");
+
+      aviso("🔄 Nueva ronda iniciada. Cartones nuevos repartidos.", "ok");
+    });
+
+    /* ---------- Girar bola ---------- */
+    let girando = false;
+    btnGirar.addEventListener("click", async () => {
+      if (girando) return;
+      if (!estadoSala || estadoSala.estado !== "jugando") return;
+
+      girando = true;
+      btnGirar.disabled = true;
+      sonidoGirar();
+
+      // Efecto visual de giro
+      bolaEl.classList.add("girando");
+      bolaEl.classList.remove("pop");
+
+      const bolas = aArray(estadoSala.bolas).map(Number);
+      const disponibles = [];
+      for (let n = 1; n <= BINGO_TOTAL_BOLAS; n++) {
+        if (!bolas.includes(n)) disponibles.push(n);
+      }
+
+      if (disponibles.length === 0) {
+        bolaEl.classList.remove("girando");
+        aviso("Ya salieron todos los números.", "info");
+        girando = false;
+        return;
+      }
+
+      // Duración del efecto + número elegido
+      const elegido = disponibles[Math.floor(Math.random() * disponibles.length)];
+      const letra   = letraDe(elegido);
+
+      // Mientras gira, mostramos números aleatorios
+      let intervalo = setInterval(() => {
+        bolaNumero.textContent = Math.floor(Math.random() * 75) + 1;
+        bolaLetra.textContent  = letraDe(bolaNumero.textContent);
+      }, 70);
+
+      setTimeout(async () => {
+        clearInterval(intervalo);
+        bolaEl.classList.remove("girando");
+
+        bolaLetra.textContent  = letra;
+        bolaNumero.textContent = elegido;
+        bolaEl.setAttribute("data-letra", letra);
+        bolaEl.classList.add("pop");
+        sonidoBola();
+
+        // Guarda en la base de datos
+        await salaRef.update({
+          bolas: bolas.concat([elegido]),
+          bolaActual: elegido
+        });
+
+        girando = false;
+      }, 1900);
+    });
+
+    /* ---------- Cerrar ronda (si multi-ganador está activo) ---------- */
+    btnCerrarRonda.addEventListener("click", async () => {
+      if (!estadoSala) return;
+      await salaRef.update({ estado: "finalizada" });
+
+      // Reparte premio si hay texto de premio numérico
+      const premio = estadoSala.config && estadoSala.config.premio;
+      const monto = parsearMonto(premio);
+      const ganadores = Object.values(estadoSala.ganadores || {});
+      if (monto && ganadores.length > 0) {
+        const parte = monto / ganadores.length;
+        aviso("💸 Premio repartido: <b>" + ganadores.length + "</b> ganador(es) reciben " +
+              "<b>" + parte.toLocaleString() + "</b> c/u.", "ok", 6500);
+      } else {
+        aviso("Ronda cerrada.", "info");
+      }
+    });
+
+    /* ============================================================
+       LISTENERS DE FIREBASE
+       ============================================================ */
+
+    /* ----- 1) Datos principales de la sala ----- */
+    salaRef.on("value", snap => {
+      const s = snap.val();
+      if (!s) {
+        document.body.innerHTML =
+          '<div class="pantalla-inicio"><div class="inicio-wrap">' +
+          '<h1 class="logo-gigante">BINGO</h1>' +
+          '<p class="tagline">Esta sala no existe o fue eliminada.</p>' +
+          '<a class="btn btn-primario" href="index.html">Volver al inicio</a>' +
+          '</div></div>';
+        return;
+      }
+      estadoSala = s;
+      renderEstado(s);
+    });
+
+    /* ----- 2) Render general ----- */
+    function renderEstado(s) {
+      const cfg = s.config || {};
+      const bolas = aArray(s.bolas).map(Number);
+      const estado = s.estado || "esperando";
+
+      // Cabecera
+      estadoEl.textContent = estado;
+
+      // Inputs de config (solo si no está jugando)
+      if (estado === "esperando" || estado === "finalizada") {
+        panelConfig.style.display = "";
+        selPatron.value = cfg.patron || "linea";
+        chkMulti.checked = !!cfg.multiGanador;
+        inpPremio.value = cfg.premio || "";
+      } else {
+        panelConfig.style.display = "none";
+      }
+
+      // Bola actual
+      const actual = Number(s.bolaActual) || 0;
+      if (actual > 0) {
+        bolaLetra.textContent  = letraDe(actual);
+        bolaNumero.textContent = actual;
+        bolaEl.setAttribute("data-letra", letraDe(actual));
+        bolaEl.classList.remove("bola-vacia");
+      } else {
+        bolaLetra.textContent  = "·";
+        bolaNumero.textContent = "--";
+        bolaEl.classList.add("bola-vacia");
+        bolaEl.removeAttribute("data-letra");
+      }
+
+      // Botones según estado
+      btnGirar.disabled       = estado !== "jugando";
+      btnIniciar.disabled     = estado === "jugando";
+      btnCerrarRonda.disabled = !(estado === "jugando" && cfg.multiGanador);
+
+      // Historial
+      renderHistorial(bolas);
+      contadorBolas.textContent = bolas.length + " / " + BINGO_TOTAL_BOLAS;
+
+      // Jugadores
+      renderJugadores(s.jugadores || {});
+
+      // Ganadores
+      renderGanadores(s.ganadores || {}, cfg);
+    }
+
+    /* ----- 3) Historial ----- */
+    function renderHistorial(bolas) {
+      if (bolas.length === 0) {
+        historialEl.innerHTML = '<p class="texto-suave">Aún no han salido números.</p>';
+        return;
+      }
+      historialEl.innerHTML = bolas.map(n => {
+        const l = letraDe(n);
+        return '<div class="bola-mini" data-letra="' + l + '">' +
+               '<small>' + l + '</small>' + n + '</div>';
+      }).join("");
+      historialEl.scrollTop = historialEl.scrollHeight;
+    }
+
+    /* ----- 4) Jugadores ----- */
+    function renderJugadores(jugadores) {
+      const ids = Object.keys(jugadores);
+      contJugEl.textContent = ids.length;
+
+      if (ids.length === 0) {
+        listaJugEl.innerHTML = '<p class="texto-suave">Nadie se ha unido todavía.</p>';
+        return;
+      }
+
+      const cfg = (estadoSala && estadoSala.config) || {};
+      const bolas = aArray(estadoSala.bolas).map(Number);
+
+      listaJugEl.innerHTML = ids.map(id => {
+        const j = jugadores[id] || {};
+        const conectado = j.online !== false;
+
+        // % de avance calculado desde las bolas reales
+        let pct = 0;
+        if (j.carton) {
+          const carton = aArray(j.carton).map(Number);
+          const r = progresoDesdeBolas(carton, bolas, cfg.patron || "linea");
+          pct = r.porcentaje;
+        }
+
+        const esGanador = !!(estadoSala.ganadores && estadoSala.ganadores[id]);
+
+        return (
+          '<div class="jugador-fila' + (conectado ? "" : " desconectado") +
+          (esGanador ? " ganador" : "") + '">' +
+            '<div class="jugador-nombre">' +
+              '<span class="punto-estado' + (conectado ? "" : " off") + '"></span>' +
+              escaparHTML(j.nombre || "Anónimo") +
+            '</div>' +
+            '<div class="jugador-pct">' + pct + '%</div>' +
+            '<div class="jugador-barra"><i style="width:' + pct + '%"></i></div>' +
+          '</div>'
+        );
+      }).join("");
+    }
+
+    /* ----- 5) Ganadores ----- */
+    function renderGanadores(ganadores, cfg) {
+      const arr = Object.keys(ganadores).map(id => ({ id, ...ganadores[id] }));
+      contGanEl.textContent = arr.length;
+
+      if (arr.length === 0) {
+        listaGanEl.innerHTML = '<p class="texto-suave">Sin ganadores todavía.</p>';
+        return;
+      }
+
+      const monto = parsearMonto(cfg.premio);
+      const parte = (monto && arr.length) ? monto / arr.length : null;
+
+      let html = arr.map((g, i) =>
+        '<div class="ganador-fila">' +
+          '<span class="medalla">' + (i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉") + '</span>' +
+          '<span class="nombre">' + escaparHTML(g.nombre || "Anónimo") + '</span>' +
+          '<span class="texto-suave">' + new Date(g.ts || Date.now()).toLocaleTimeString() + '</span>' +
+        '</div>'
+      ).join("");
+
+      if (parte) {
+        html += '<div class="reparto">💸 Premio total: <b>' + monto.toLocaleString() +
+                '</b> · Reparto: <b>' + parte.toLocaleString() + '</b> por ganador (' +
+                arr.length + ').</div>';
+      }
+
+      listaGanEl.innerHTML = html;
+
+      // Aviso global cuando el primero gana
+      if (arr.length === 1 && !salaRef._bingoAvisado) {
+        salaRef._bingoAvisado = true;
+        lanzarConfeti(110);
+        sonidoGanar();
+        aviso("🎉 ¡BINGO de <b>" + escaparHTML(arr[0].nombre) + "</b>!", "ok", 6000);
+      }
+      if (arr.length === 0) salaRef._bingoAvisado = false;
+    }
+  </script>
+
+</body>
+</html>
