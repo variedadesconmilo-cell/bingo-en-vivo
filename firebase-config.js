@@ -15,7 +15,7 @@
    ============================================================ */
 
 const firebaseConfig = {
-  apiKey: "AIzaSyB_ZnCaKQF0EQ-hKjS0vnh9JNnvosVZQ4",
+  apiKey: "AIzaSyCFynTG7CrIjWF1gmHNclJM6khxHUYlQ",
   authDomain: "bingo-en-vivo-30d59.firebaseapp.com",
   databaseURL: "https://bingo-en-vivo-30d59-default-rtdb.firebaseio.com",
   projectId: "bingo-en-vivo-30d59",
