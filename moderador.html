@@ -6,143 +6,277 @@
 <meta name="theme-color" content="#06040f">
 <title>Moderador — Bingo en Vivo</title>
 <link rel="stylesheet" href="style.css">
+<style>
+  /* ============================================================
+     ESTILOS DE LA PANTALLA DE LOGIN
+     ============================================================ */
+  .pantalla-login {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .caja-login {
+    width: 100%;
+    max-width: 400px;
+    background: var(--panel);
+    border: 1px solid var(--borde);
+    border-radius: 20px;
+    padding: 30px;
+    backdrop-filter: blur(14px);
+    text-align: center;
+    box-shadow: 0 12px 40px rgba(0,0,0,.4);
+  }
+  .caja-login h2 { margin-bottom: 20px; font-size: 1.5rem; }
+  .caja-login .campo { text-align: left; }
+  .error-login {
+    color: #ff4d6d;
+    font-size: .85rem;
+    margin-top: 10px;
+    min-height: 1.2em;
+  }
+</style>
 </head>
 <body>
 
-  <!-- ================= TOPBAR ================= -->
-  <header class="topbar">
-    <div class="marca">BINGO EN VIVO <em>· MODERADOR</em></div>
-    <div class="topbar-derecha">
-      <div class="chip-sala">
-        <small>SALA</small>
-        <strong id="codigoSala">— — — — —</strong>
-      </div>
-      <button class="btn btn-mini btn-secundario" id="btnCopiar">Copiar enlace</button>
-      <button class="btn btn-mini" id="btnSonido">🔊</button>
+  <!-- ============================================================
+       PANTALLA DE LOGIN
+       ============================================================ -->
+  <section class="pantalla-login" id="pantallaLogin">
+    <div class="caja-login">
+      <div style="font-size:3rem; margin-bottom:10px;">🎙️</div>
+      <h2>Acceso Moderador</h2>
+      <p class="texto-suave" style="margin-bottom:20px;">
+        Ingresa tus credenciales para administrar la sala.
+      </p>
+
+      <label class="campo">
+        <span>Correo electrónico</span>
+        <input class="input" id="loginEmail" type="email" placeholder="tu@email.com" autocomplete="username">
+      </label>
+
+      <label class="campo">
+        <span>Contraseña</span>
+        <input class="input" id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password">
+      </label>
+
+      <button class="btn btn-primario" id="btnLogin" style="width:100%; margin-top:10px;">
+        Iniciar sesión
+      </button>
+
+      <p class="error-login" id="errorLogin"></p>
+
+      <p class="texto-suave" style="font-size:.78rem; margin-top:16px;">
+        Solo personal autorizado.
+      </p>
     </div>
-  </header>
+  </section>
 
-  <main class="layout-mod">
+  <!-- ============================================================
+       CONTENIDO DEL MODERADOR (oculto hasta autenticarse)
+       ============================================================ -->
+  <div id="contenidoModerador" class="oculto">
 
-    <!-- ============ COLUMNA IZQUIERDA: SORTEO ============ -->
-    <section class="columna">
-
-      <div class="panel">
-        <div class="panel-titulo">
-          <span>Bola actual</span>
-          <small id="estadoPartida">esperando</small>
+    <!-- ================= TOPBAR ================= -->
+    <header class="topbar">
+      <div class="marca">BINGO EN VIVO <em>· MODERADOR</em></div>
+      <div class="topbar-derecha">
+        <div class="chip-sala">
+          <small>SALA</small>
+          <strong id="codigoSala">— — — — —</strong>
         </div>
+        <button class="btn btn-mini btn-secundario" id="btnCopiar">Copiar enlace</button>
+        <button class="btn btn-mini" id="btnSonido">🔊</button>
+        <button class="btn btn-mini btn-secundario" id="btnSalir">Salir</button>
+      </div>
+    </header>
 
-        <div class="bola-escenario">
-          <div class="bola bola-vacia" id="bola">
-            <div class="bola-letra"  id="bolaLetra">·</div>
-            <div class="bola-numero" id="bolaNumero">--</div>
+    <main class="layout-mod">
+
+      <!-- ============ COLUMNA IZQUIERDA: SORTEO ============ -->
+      <section class="columna">
+
+        <div class="panel">
+          <div class="panel-titulo">
+            <span>Bola actual</span>
+            <small id="estadoPartida">esperando</small>
+          </div>
+
+          <div class="bola-escenario">
+            <div class="bola bola-vacia" id="bola">
+              <div class="bola-letra"  id="bolaLetra">·</div>
+              <div class="bola-numero" id="bolaNumero">--</div>
+            </div>
+          </div>
+
+          <button class="btn btn-girar" id="btnGirar" disabled>
+            🎲 GIRAR BOLA
+          </button>
+
+          <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap">
+            <button class="btn btn-primario btn-mini" id="btnIniciar">▶ Iniciar partida</button>
+            <button class="btn btn-mini" id="btnNuevaRonda">🔄 Nueva ronda</button>
+            <button class="btn btn-mini btn-secundario" id="btnCerrarRonda" disabled>🏁 Cerrar ronda</button>
           </div>
         </div>
 
-        <button class="btn btn-girar" id="btnGirar" disabled>
-          🎲 GIRAR BOLA
-        </button>
-
-        <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap">
-          <button class="btn btn-primario btn-mini" id="btnIniciar">▶ Iniciar partida</button>
-          <button class="btn btn-mini" id="btnNuevaRonda">🔄 Nueva ronda</button>
-          <button class="btn btn-mini btn-secundario" id="btnCerrarRonda" disabled>🏁 Cerrar ronda</button>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-titulo">
-          <span>Historial</span>
-          <small id="contadorBolas">0 / 75</small>
-        </div>
-        <div class="historial" id="historial">
-          <p class="texto-suave">Aún no han salido números.</p>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- ============ COLUMNA DERECHA: CONTROL ============ -->
-    <section class="columna">
-
-      <!-- CONFIGURACIÓN -->
-      <div class="panel" id="panelConfig">
-        <div class="panel-titulo">
-          <span>Configuración de la partida</span>
-          <small>antes de iniciar</small>
+        <div class="panel">
+          <div class="panel-titulo">
+            <span>Historial</span>
+            <small id="contadorBolas">0 / 75</small>
+          </div>
+          <div class="historial" id="historial">
+            <p class="texto-suave">Aún no han salido números.</p>
+          </div>
         </div>
 
-        <label class="campo">
-          <span>Modalidad de victoria</span>
-          <select class="input" id="selPatron">
-            <option value="linea">Línea (fila, columna o diagonal)</option>
-            <option value="cartonLleno">Cartón Lleno</option>
-            <option value="letraL">Letra L</option>
-            <option value="letraO">Letra O</option>
-            <option value="cuatroEsquinas">Cuatro Esquinas</option>
-            <option value="equis">Equis (X)</option>
-          </select>
-        </label>
+      </section>
 
-        <label class="campo">
-          <span>Premio (texto o monto)</span>
-          <input class="input" id="inpPremio" placeholder="Ej: $50.000 o 1 botella de vino">
-        </label>
+      <!-- ============ COLUMNA DERECHA: CONTROL ============ -->
+      <section class="columna">
 
-        <label class="switch">
-          <input type="checkbox" id="chkMulti">
-          <span class="slider"></span>
-          <span class="switch-label">Permitir más de un ganador</span>
-        </label>
+        <!-- CONFIGURACIÓN -->
+        <div class="panel" id="panelConfig">
+          <div class="panel-titulo">
+            <span>Configuración de la partida</span>
+            <small>antes de iniciar</small>
+          </div>
 
-        <p class="texto-suave">
-          Si está desactivado, el juego se cierra automáticamente al primer BINGO válido.
-        </p>
+          <label class="campo">
+            <span>Modalidad de victoria</span>
+            <select class="input" id="selPatron">
+              <option value="linea">Línea (fila, columna o diagonal)</option>
+              <option value="cartonLleno">Cartón Lleno</option>
+              <option value="letraL">Letra L</option>
+              <option value="letraO">Letra O</option>
+              <option value="cuatroEsquinas">Cuatro Esquinas</option>
+              <option value="equis">Equis (X)</option>
+            </select>
+          </label>
 
-        <button class="btn btn-secundario" id="btnGuardarConfig" style="width:100%; margin-top:14px">
-          Guardar configuración
-        </button>
-      </div>
+          <label class="campo">
+            <span>Premio (texto o monto)</span>
+            <input class="input" id="inpPremio" placeholder="Ej: $50.000 o 1 botella de vino">
+          </label>
 
-      <!-- JUGADORES -->
-      <div class="panel">
-        <div class="panel-titulo">
-          <span>Jugadores conectados</span>
-          <small id="contadorJugadores">0</small>
+          <label class="switch">
+            <input type="checkbox" id="chkMulti">
+            <span class="slider"></span>
+            <span class="switch-label">Permitir más de un ganador</span>
+          </label>
+
+          <p class="texto-suave">
+            Si está desactivado, el juego se cierra automáticamente al primer BINGO válido.
+          </p>
+
+          <button class="btn btn-secundario" id="btnGuardarConfig" style="width:100%; margin-top:14px">
+            Guardar configuración
+          </button>
         </div>
-        <div class="lista-jugadores" id="listaJugadores">
-          <p class="texto-suave">Nadie se ha unido todavía.</p>
-        </div>
-      </div>
 
-      <!-- GANADORES -->
-      <div class="panel" id="panelGanadores">
-        <div class="panel-titulo">
-          <span>Ganadores</span>
-          <small id="contadorGanadores">0</small>
+        <!-- JUGADORES -->
+        <div class="panel">
+          <div class="panel-titulo">
+            <span>Jugadores conectados</span>
+            <small id="contadorJugadores">0</small>
+          </div>
+          <div class="lista-jugadores" id="listaJugadores">
+            <p class="texto-suave">Nadie se ha unido todavía.</p>
+          </div>
         </div>
-        <div class="lista-ganadores" id="listaGanadores">
-          <p class="texto-suave">Sin ganadores todavía.</p>
+
+        <!-- GANADORES -->
+        <div class="panel" id="panelGanadores">
+          <div class="panel-titulo">
+            <span>Ganadores</span>
+            <small id="contadorGanadores">0</small>
+          </div>
+          <div class="lista-ganadores" id="listaGanadores">
+            <p class="texto-suave">Sin ganadores todavía.</p>
+          </div>
         </div>
-      </div>
 
-    </section>
+      </section>
 
-  </main>
+    </main>
+
+  </div> <!-- FIN contenidoModerador -->
 
   <!-- ===== SDK Firebase ===== -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
   <script src="firebase-config.js"></script>
   <script src="app.js"></script>
 
   <script>
     /* ============================================================
-       MODERADOR
+       AUTENTICACIÓN DEL MODERADOR
        ============================================================ */
+    const pantallaLogin  = document.getElementById("pantallaLogin");
+    const contenidoModer = document.getElementById("contenidoModerador");
+    const loginEmail     = document.getElementById("loginEmail");
+    const loginPassword  = document.getElementById("loginPassword");
+    const btnLogin       = document.getElementById("btnLogin");
+    const errorLogin     = document.getElementById("errorLogin");
+    const btnSalir       = document.getElementById("btnSalir");
 
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        pantallaLogin.classList.add("oculto");
+        contenidoModer.classList.remove("oculto");
+        console.log("✅ Moderador autenticado:", user.email);
+      } else {
+        pantallaLogin.classList.remove("oculto");
+        contenidoModer.classList.add("oculto");
+      }
+    });
+
+    btnLogin.addEventListener("click", async () => {
+      errorLogin.textContent = "";
+      const email = loginEmail.value.trim();
+      const pass  = loginPassword.value;
+
+      if (!email || !pass) {
+        errorLogin.textContent = "Completa email y contraseña.";
+        return;
+      }
+
+      btnLogin.disabled = true;
+      btnLogin.textContent = "Verificando...";
+
+      try {
+        await firebase.auth().signInWithEmailAndPassword(email, pass);
+      } catch (err) {
+        console.error(err);
+        if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+          errorLogin.textContent = "Contraseña incorrecta.";
+        } else if (err.code === "auth/user-not-found") {
+          errorLogin.textContent = "Usuario no existe.";
+        } else if (err.code === "auth/invalid-email") {
+          errorLogin.textContent = "Email inválido.";
+        } else {
+          errorLogin.textContent = "Error: " + err.message;
+        }
+        btnLogin.disabled = false;
+        btnLogin.textContent = "Iniciar sesión";
+      }
+    });
+
+    loginPassword.addEventListener("keydown", e => {
+      if (e.key === "Enter") btnLogin.click();
+    });
+
+    btnSalir.addEventListener("click", async () => {
+      await firebase.auth().signOut();
+      location.reload();
+    });
+
+    /* ============================================================
+       LÓGICA DEL MODERADOR
+       ============================================================ */
     const CODIGO = leerSalaDeURL();
     if (!CODIGO) {
       document.body.innerHTML =
@@ -158,7 +292,6 @@
 
     const salaRef = db.ref("salas/" + CODIGO);
 
-    /* Estado local espejo */
     let estadoSala = null;
 
     /* ---------- BOTONES ---------- */
@@ -186,20 +319,17 @@
     const contGanEl    = document.getElementById("contadorGanadores");
     const panelConfig  = document.getElementById("panelConfig");
 
-    /* ---------- Sonido ---------- */
     btnSonido.addEventListener("click", () => {
       setSilencio(!estaSilenciado());
       btnSonido.textContent = estaSilenciado() ? "🔇" : "🔊";
     });
 
-    /* ---------- Copiar enlace ---------- */
     btnCopiar.addEventListener("click", async () => {
       const enlace = enlaceJugadores(CODIGO);
       await copiarAlPortapapeles(enlace);
       aviso("✅ Enlace copiado:<br><small>" + enlace + "</small>", "ok", 5000);
     });
 
-    /* ---------- Guardar configuración ---------- */
     btnGuardarCfg.addEventListener("click", async () => {
       await salaRef.child("config").set({
         patron: selPatron.value,
@@ -209,11 +339,9 @@
       aviso("Configuración guardada.", "ok");
     });
 
-    /* ---------- Iniciar partida ---------- */
     btnIniciar.addEventListener("click", async () => {
       if (!estadoSala) return;
 
-      // Asegura guardar config actual
       await salaRef.child("config").set({
         patron: selPatron.value,
         multiGanador: chkMulti.checked,
@@ -227,18 +355,17 @@
         return;
       }
 
-      // Genera un cartón nuevo para cada jugador conectado
       const updates = {};
       Object.keys(jugadores).forEach(id => {
-        updates["jugadores/" + id + "/carton"]    = generarCarton();
-        updates["jugadores/" + id + "/marcas"]    = null;   // limpia marcas
-        updates["jugadores/" + id + "/bingo"]     = false;
+        updates["jugadores/" + id + "/carton"] = generarCarton();
+        updates["jugadores/" + id + "/marcas"] = null;
+        updates["jugadores/" + id + "/bingo"]  = false;
       });
 
-      updates["estado"]      = "jugando";
-      updates["bolas"]       = [];
-      updates["bolaActual"]  = 0;
-      updates["ganadores"]   = null;
+      updates["estado"]     = "jugando";
+      updates["bolas"]      = [];
+      updates["bolaActual"] = 0;
+      updates["ganadores"]  = null;
 
       await salaRef.update(updates);
 
@@ -250,7 +377,6 @@
       aviso("¡Partida iniciada! 🎉", "ok");
     });
 
-    /* ---------- Nueva ronda ---------- */
     btnNuevaRonda.addEventListener("click", async () => {
       if (!estadoSala) return;
       const jugadores = estadoSala.jugadores || {};
@@ -278,7 +404,6 @@
       aviso("🔄 Nueva ronda iniciada. Cartones nuevos repartidos.", "ok");
     });
 
-    /* ---------- Girar bola ---------- */
     let girando = false;
     btnGirar.addEventListener("click", async () => {
       if (girando) return;
@@ -288,7 +413,6 @@
       btnGirar.disabled = true;
       sonidoGirar();
 
-      // Efecto visual de giro
       bolaEl.classList.add("girando");
       bolaEl.classList.remove("pop");
 
@@ -305,11 +429,9 @@
         return;
       }
 
-      // Duración del efecto + número elegido
       const elegido = disponibles[Math.floor(Math.random() * disponibles.length)];
       const letra   = letraDe(elegido);
 
-      // Mientras gira, mostramos números aleatorios
       let intervalo = setInterval(() => {
         bolaNumero.textContent = Math.floor(Math.random() * 75) + 1;
         bolaLetra.textContent  = letraDe(bolaNumero.textContent);
@@ -325,7 +447,6 @@
         bolaEl.classList.add("pop");
         sonidoBola();
 
-        // Guarda en la base de datos
         await salaRef.update({
           bolas: bolas.concat([elegido]),
           bolaActual: elegido
@@ -335,12 +456,10 @@
       }, 1900);
     });
 
-    /* ---------- Cerrar ronda (si multi-ganador está activo) ---------- */
     btnCerrarRonda.addEventListener("click", async () => {
       if (!estadoSala) return;
       await salaRef.update({ estado: "finalizada" });
 
-      // Reparte premio si hay texto de premio numérico
       const premio = estadoSala.config && estadoSala.config.premio;
       const monto = parsearMonto(premio);
       const ganadores = Object.values(estadoSala.ganadores || {});
@@ -353,11 +472,6 @@
       }
     });
 
-    /* ============================================================
-       LISTENERS DE FIREBASE
-       ============================================================ */
-
-    /* ----- 1) Datos principales de la sala ----- */
     salaRef.on("value", snap => {
       const s = snap.val();
       if (!s) {
@@ -373,16 +487,13 @@
       renderEstado(s);
     });
 
-    /* ----- 2) Render general ----- */
     function renderEstado(s) {
       const cfg = s.config || {};
       const bolas = aArray(s.bolas).map(Number);
       const estado = s.estado || "esperando";
 
-      // Cabecera
       estadoEl.textContent = estado;
 
-      // Inputs de config (solo si no está jugando)
       if (estado === "esperando" || estado === "finalizada") {
         panelConfig.style.display = "";
         selPatron.value = cfg.patron || "linea";
@@ -392,7 +503,6 @@
         panelConfig.style.display = "none";
       }
 
-      // Bola actual
       const actual = Number(s.bolaActual) || 0;
       if (actual > 0) {
         bolaLetra.textContent  = letraDe(actual);
@@ -406,23 +516,17 @@
         bolaEl.removeAttribute("data-letra");
       }
 
-      // Botones según estado
       btnGirar.disabled       = estado !== "jugando";
       btnIniciar.disabled     = estado === "jugando";
       btnCerrarRonda.disabled = !(estado === "jugando" && cfg.multiGanador);
 
-      // Historial
       renderHistorial(bolas);
       contadorBolas.textContent = bolas.length + " / " + BINGO_TOTAL_BOLAS;
 
-      // Jugadores
       renderJugadores(s.jugadores || {});
-
-      // Ganadores
       renderGanadores(s.ganadores || {}, cfg);
     }
 
-    /* ----- 3) Historial ----- */
     function renderHistorial(bolas) {
       if (bolas.length === 0) {
         historialEl.innerHTML = '<p class="texto-suave">Aún no han salido números.</p>';
@@ -436,7 +540,6 @@
       historialEl.scrollTop = historialEl.scrollHeight;
     }
 
-    /* ----- 4) Jugadores ----- */
     function renderJugadores(jugadores) {
       const ids = Object.keys(jugadores);
       contJugEl.textContent = ids.length;
@@ -453,7 +556,6 @@
         const j = jugadores[id] || {};
         const conectado = j.online !== false;
 
-        // % de avance calculado desde las bolas reales
         let pct = 0;
         if (j.carton) {
           const carton = aArray(j.carton).map(Number);
@@ -477,7 +579,6 @@
       }).join("");
     }
 
-    /* ----- 5) Ganadores ----- */
     function renderGanadores(ganadores, cfg) {
       const arr = Object.keys(ganadores).map(id => ({ id, ...ganadores[id] }));
       contGanEl.textContent = arr.length;
@@ -506,7 +607,6 @@
 
       listaGanEl.innerHTML = html;
 
-      // Aviso global cuando el primero gana
       if (arr.length === 1 && !salaRef._bingoAvisado) {
         salaRef._bingoAvisado = true;
         lanzarConfeti(110);
